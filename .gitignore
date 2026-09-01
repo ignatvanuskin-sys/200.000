@@ -1,0 +1,19 @@
+# secrets
+.env
+demo/.env
+*.env
+!demo/.env.example
+# leads
+demo/leads.jsonl
+# python
+__pycache__/
+*.py[cod]
+# node
+node_modules/
+# netlify local
+.netlify/
+# zips (не пушим бинарники в гит, для Netlify деплоя используй drag&drop или CI)
+*.zip
+# os
+.DS_Store
+Thumbs.db

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Имплант-Дент — WhatsApp</title>
+<style>
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#111b21}
+body{display:flex;justify-content:center;align-items:center;background:#0b141a}
+.phone{width:100%;max-width:420px;height:100%;max-height:860px;background:#efeae2;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.4);position:relative;overflow:hidden}
+@media(min-width:520px){ .phone{border-radius:14px; height:92vh; margin:12px} body{background:#d1d7db} }
+/* WhatsApp header */
+.wa-header{background:#008069;color:#fff;display:flex;align-items:center;gap:10px;padding:10px 12px;flex-shrink:0}
+.wa-header .back{font-size:22px;cursor:pointer;opacity:.9}
+.wa-avatar{width:40px;height:40px;border-radius:50%;background:#fff;color:#008069;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex-shrink:0}
+.wa-info{flex:1;min-width:0}
+.wa-name{font-size:16px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wa-sub{font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wa-actions{display:flex;gap:14px;font-size:20px;opacity:.9}
+.wa-actions span{cursor:pointer}
+/* system banner */
+.wa-banner{background:#182531;color:#8696a0;font-size:11px;text-align:center;padding:6px 10px}
+.wa-banner b{color:#d1d7db}
+/* chips - quick replies */
+.chips{display:flex;gap:8px;padding:8px 10px;overflow-x:auto;scrollbar-width:none;background:#efeae2;flex-shrink:0;border-bottom:1px solid #d1d7db}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;background:#fff;border:1px solid #d1d7db;border-radius:18px;padding:6px 12px;font-size:13px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 1px rgba(0,0,0,.08)}
+.chip:active{transform:scale(.97)}
+/* chat */
+.chat{flex:1;overflow-y:auto;padding:12px 8px 16px;display:flex;flex-direction:column;gap:6px;background:#e5ddd5;background-image: radial-gradient(#d1d7db 1px, transparent 1px);background-size:18px 18px;position:relative}
+.chat::before{content:"";position:absolute;inset:0;opacity:.06;background-image:url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 30 Q40 10 60 30 T100 30' stroke='%23000' fill='none' opacity='.2'/%3E%3C/svg%3E");pointer-events:none}
+.bubble{max-width:78%;padding:7px 8px 18px;position:relative;border-radius:7.5px;font-size:14.2px;line-height:1.35;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 0.5px rgba(0,0,0,.13)}
+.bubble.user{align-self:flex-end;background:#dcf8c6;border-top-right-radius:0}
+.bubble.bot{align-self:flex-start;background:#fff;border-top-left-radius:0}
+.bubble .time{position:absolute;right:6px;bottom:2px;font-size:11px;color:#667781;display:flex;align-items:center;gap:3px}
+.bubble.user .time{color:#667781}
+.checks{font-size:11px;letter-spacing:-2px;color:#53bdeb}
+.typing{align-self:flex-start;background:#fff;border-radius:7.5px;padding:10px 14px;display:flex;gap:4px;align-items:center;box-shadow:0 1px 0.5px rgba(0,0,0,.13)}
+.typing span{width:6px;height:6px;background:#90949c;border-radius:50%;display:inline-block;animation:bounce 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.15s} .typing span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.5}40%{transform:translateY(-4px);opacity:1}}
+.meta{font-size:10px;color:#667781;text-align:center;padding:2px}
+.lead-banner{background:#e7fce3;border:1px solid #c8e6c9;color:#2e7d32;font-size:12px;padding:6px 10px;border-radius:8px;margin:4px 8px;text-align:center;display:none}
+/* input */
+.wa-input{display:flex;align-items:flex-end;gap:6px;padding:6px 8px;background:#f0f2f5;flex-shrink:0}
+.wa-field{flex:1;display:flex;align-items:flex-end;gap:6px;background:#fff;border-radius:22px;padding:6px 10px;min-height:42px}
+.wa-field textarea{flex:1;border:0;outline:none;resize:none;font-size:15px;line-height:20px;max-height:80px;padding:6px 2px;font-family:inherit;background:transparent}
+.wa-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#54656f;cursor:pointer;flex-shrink:0}
+.wa-send{width:46px;height:46px;border-radius:50%;background:#008069;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.wa-send:active{transform:scale(.96)}
+.wa-send:disabled{opacity:.5;cursor:not-allowed}
+/* info collapsible */
+.info-toggle{font-size:11px;color:#008069;text-align:center;padding:4px;cursor:pointer;background:#f0f2f5}
+.info-panel{display:none;font-size:12px;line-height:1.4;color:#3b4a54;background:#fff;padding:8px 12px;border-top:1px solid #e9edef}
+.info-panel a{color:#008069;text-decoration:none}
+.info-panel.open{display:block}
+</style>
+</head>
+<body>
+<div class="phone">
+  <!-- Header WhatsApp -->
+  <div class="wa-header">
+    <div class="back">‹</div>
+    <div class="wa-avatar">🦷</div>
+    <div class="wa-info">
+      <div class="wa-name">Имплант-Дент</div>
+      <div class="wa-sub">Петропавловск · в сети</div>
+    </div>
+    <div class="wa-actions"><span>📞</span><span>📹</span><span>⋮</span></div>
+  </div>
+  <div class="wa-banner">🔒 Сообщения защищены сквозным шифрованием — демо-чат</div>
+
+  <!-- Quick replies -->
+  <div class="chips" id="chips">
+    <div class="chip" onclick="sendChip('Сколько стоит имплант?')">Имплант?</div>
+    <div class="chip" onclick="sendChip('Болит зуб уже 3 дня, ноет постоянно')">Болит зуб</div>
+    <div class="chip" onclick="sendChip('Делаете ли чистку? Цена?')">Чистка</div>
+    <div class="chip" onclick="sendChip('Где вы находитесь?')">Где вы?</div>
+    <div class="chip" onclick="sendChip('Ребёнку 6 лет, можно к вам?')">Ребёнок</div>
+    <div class="chip" onclick="sendChip('Есть снимок КТ')">Есть снимок</div>
+  </div>
+
+  <div id="lead" class="lead-banner"></div>
+
+  <!-- Chat -->
+  <div id="chat" class="chat"></div>
+
+  <div class="info-toggle" onclick="this.nextElementSibling.classList.toggle('open')">ℹ️ Инфо о клинике · цены — нажать</div>
+  <div class="info-panel">
+    <b>Имплант-Дент</b> · ул. Интернациональная, 83, 1 этаж · <a href="tel:+77085436318">+7 708 543-63-18</a> · <a href="https://wa.me/77781470702" target="_blank">WhatsApp +7 778 147-07-02</a> · <a href="https://instagram.com/implant_dent_p" target="_blank">@implant_dent_p</a><br>
+    Приём строго по записи · Способы оплаты: карта, наличные, перевод, QR · 4.7★ (26 оценок) · Бот не бронирует — только собирает имя+телефон и обещает звонок. Цены из прайса 25.02.2026: имплант от 140 000 ₸, чистка 24 000 ₸.
+  </div>
+
+  <!-- Input -->
+  <div class="wa-input">
+    <div class="wa-field">
+      <div class="wa-icon">😊</div>
+      <textarea id="inp" rows="1" placeholder="Сообщение" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}" oninput="autoGrow(this)"></textarea>
+      <div class="wa-icon">📎</div>
+    </div>
+    <button id="btn" class="wa-send" onclick="send()">➤</button>
+  </div>
+</div>
+
+<script>
+const chat = document.getElementById('chat');
+const inp = document.getElementById('inp');
+const btn = document.getElementById('btn');
+let messages = [];
+
+function fmtTime(){ return new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}) }
+function add(role, text, meta=''){
+  const b = document.createElement('div');
+  b.className = 'bubble ' + (role==='user'?'user':'bot');
+  b.textContent = text;
+  const t = document.createElement('div');
+  t.className = 'time';
+  t.textContent = fmtTime() + (role==='user' ? ' ✓✓' : '');
+  if(role==='user'){ const c=document.createElement('span'); c.className='checks'; c.textContent='✓✓'; t.textContent=fmtTime()+' '; t.appendChild(c); }
+  b.appendChild(t);
+  chat.appendChild(b);
+  if(meta && !meta.includes('/')){ // не показывать модель как время
+    const m=document.createElement('div');
+    m.className='meta'; m.textContent=meta; chat.appendChild(m);
+  }
+  chat.scrollTop = chat.scrollHeight;
+}
+function showTyping(){
+  const d=document.createElement('div'); d.id='typing'; d.className='typing'; d.innerHTML='<span></span><span></span><span></span>';
+  chat.appendChild(d); chat.scrollTop=chat.scrollHeight;
+  return d;
+}
+function autoGrow(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,80)+'px'; }
+
+const API_URLS = ['/.netlify/functions/chat', '/api/chat'];
+async function fetchChat(payload){
+  let lastErr=null;
+  for(const url of API_URLS){
+    try{
+      const ctrl=new AbortController(); const tm=setTimeout(()=>ctrl.abort(),14000);
+      const r=await fetch(url,{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload), signal:ctrl.signal});
+      clearTimeout(tm);
+      if(r.status===404){ lastErr='404 '+url; continue; }
+      const j=await r.json();
+      if(j.error){
+        const msg=j.error+' '+(j.detail||'');
+        if(msg.includes('GEMINI_API_KEY') || msg.includes('OPENROUTER_API_KEY') || msg.includes('not set')){
+          throw new Error('Бот не настроен — администратору нужно добавить GEMINI_API_KEY в Netlify → Site settings → Environment variables');
+        }
+        throw new Error(j.error + (j.detail? ' '+j.detail:''));
+      }
+      return j;
+    }catch(e){ 
+      if(String(e.message).includes('не настроен')) throw e;
+      lastErr=e; continue; 
+    }
+  }
+  throw lastErr || new Error('API недоступен');
+}
+async function send(){
+  const text = inp.value.trim();
+  if(!text) return;
+  inp.value=''; autoGrow(inp);
+  btn.disabled=true;
+  add('user', text);
+  messages.push({role:'user', content:text});
+  if(/\+7|8\s*\(?\d{3}/.test(text)){
+    const lb=document.getElementById('lead');
+    lb.style.display='block'; lb.textContent='✓ Похоже на телефон — в конце бот скажет «Передал администратору, перезвонят и подберут время»';
+  }
+  const typing = showTyping();
+  try{
+    const j=await fetchChat({messages});
+    typing.remove();
+    add('bot', j.reply);
+    messages.push({role:'assistant', content:j.reply});
+  }catch(e){
+    typing.remove();
+    add('bot', 'Ошибка: '+e.message);
+  }finally{ btn.disabled=false; inp.focus(); }
+}
+function sendChip(t){ inp.value=t; send(); }
+
+// Авто-старт: бот пишет первым (как в WhatsApp)
+(async()=>{
+  messages.push({role:'user', content:'Привет! Начни как в промпте: ты пишешь первым одну строку «Здравствуйте! Имплант-Дент. Что вас беспокоит?»'});
+  const typing=showTyping();
+  try{
+    const j=await fetchChat({messages});
+    typing.remove();
+    if(!j.error){ add('bot', j.reply); messages.push({role:'assistant', content:j.reply}); }
+  }catch(e){ typing.remove(); }
+  messages = messages.filter(m=>!m.content.includes('Начни как в промпте'));
+  if(messages.length && messages[0].role==='user') messages.shift();
+})();
+</script>
+</body>
+</html>
