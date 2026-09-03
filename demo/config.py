@@ -16,9 +16,10 @@ OPENROUTER_REFERER = os.getenv("OPENROUTER_REFERER", "http://localhost:8000")
 OPENROUTER_TITLE = os.getenv("OPENROUTER_TITLE", "Implant-Dent Demo")
 
 # --- WhatsApp Cloud API (Meta) ---
+# Поддержка обоих вариантов имён переменных (короткие и полные)
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN", "")
-WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
-WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "")
+WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "") or os.getenv("PHONE_NUMBER_ID", "")
+WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "") or os.getenv("VERIFY_TOKEN", "")
 WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "")  # для проверки подписи X-Hub-Signature-256
 
 # --- Telegram (уведомления админу о лидах) ---
