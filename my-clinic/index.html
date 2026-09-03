@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dentica — твоя клиника demo</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,Arial;background:#f6f7f9;color:#111}
+.hero{background:#008069;color:#fff;padding:28px 20px;text-align:center}
+.hero h1{margin:0;font-size:28px}
+.hero p{opacity:.9;margin:8px 0 16px}
+.btn{display:inline-block;background:#fff;color:#008069;padding:12px 18px;border-radius:22px;font-weight:700;text-decoration:none}
+.sec{max-width:900px;margin:0 auto;padding:18px 16px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.price{font-weight:700;color:#008069}
+.wa-float{position:fixed;right:16px;bottom:16px;width:58px;height:58px;border-radius:50%;background:#25d366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.25);z-index:999}
+.chat-wrap{position:fixed;right:12px;bottom:78px;width:390px;max-width:calc(100vw - 24px);height:540px;background:#efeae2;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.3);display:none;flex-direction:column;overflow:hidden;z-index:999}
+.chat-wrap.open{display:flex}
+@media(max-width:480px){ .chat-wrap{right:0;left:0;bottom:0;width:100%;height:78vh;border-radius:14px 14px 0 0} }
+.wa-header{background:#008069;color:#fff;display:flex;align-items:center;gap:10px;padding:10px 12px}
+.wa-avatar{width:36px;height:36px;border-radius:50%;background:#fff;color:#008069;display:flex;align-items:center;justify-content:center;font-weight:700}
+.wa-name{font-weight:600}
+.wa-sub{font-size:11px;opacity:.85}
+.chips{display:flex;gap:6px;padding:6px 8px;overflow-x:auto;background:#efeae2}
+.chip{flex:0 0 auto;background:#fff;border:1px solid #d1d7db;border-radius:16px;padding:5px 10px;font-size:12px;cursor:pointer}
+.chat{flex:1;overflow:auto;padding:10px 8px;display:flex;flex-direction:column;gap:6px;background:#e5ddd5}
+.bubble{max-width:78%;padding:7px 8px 18px;border-radius:7.5px;font-size:14px;line-height:1.35;position:relative;box-shadow:0 1px .5px rgba(0,0,0,.13)}
+.bubble.user{align-self:flex-end;background:#dcf8c6;border-top-right-radius:0}
+.bubble.bot{align-self:flex-start;background:#fff;border-top-left-radius:0}
+.time{position:absolute;right:6px;bottom:2px;font-size:10px;color:#667781}
+.input{display:flex;gap:6px;padding:6px 8px;background:#f0f2f5}
+.input textarea{flex:1;border:0;outline:none;resize:none;border-radius:18px;padding:10px 12px;font-family:inherit}
+.send{width:42px;height:42px;border-radius:50%;background:#008069;color:#fff;border:0;font-size:18px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Dentica — клиника, где не больно</h1>
+  <p>Алматы · пр. Абая, 115 · 4.9★ · Имплантация · Чистка · Терапия</p>
+  <a href="#" class="btn" onclick="toggleChat();return false">Записаться в WhatsApp</a>
+</div>
+
+<div class="sec">
+  <h3>Услуги</h3>
+  <div class="cards">
+    <div class="card"><b>Имплант под ключ</b><br><span class="price">от 140 000 ₸</span><br>Титан + коронка, снимок на месте</div>
+    <div class="card"><b>Чистка УЗ</b><br><span class="price">15 000 ₸</span><br>30 мин, без боли, с полировкой</div>
+    <div class="card"><b>Кариес</b><br><span class="price">12 000–26 000 ₸</span><br>Световая пломба, 1 визит</div>
+  </div>
+</div>
+
+<div class="sec">
+  <h3>Почему мы</h3>
+  <div class="card">Безболезненно · По записи без очереди · Оплата картой/QR · Тот же бот что у Имплант-Дент, только короче и дешевле</div>
+</div>
+
+<div class="sec" style="text-align:center;color:#667781;font-size:12px">Демо-клиника. Бот ниже — тот же что для Имплант-Дент (Gemini 3.6-flash, 1500/день). Нажми зелёную кнопку.</div>
+
+<!-- Floating WhatsApp -->
+<div class="wa-float" onclick="toggleChat()">💬</div>
+
+<!-- Chat widget -->
+<div id="chatWrap" class="chat-wrap">
+  <div class="wa-header">
+    <div class="wa-avatar">🦷</div>
+    <div><div class="wa-name">Dentica</div><div class="wa-sub">в сети · отвечает ИИ</div></div>
+    <div style="margin-left:auto;cursor:pointer" onclick="toggleChat()">✕</div>
+  </div>
+  <div class="chips">
+    <div class="chip" onclick="sendChip('Сколько стоит имплант?')">Имплант?</div>
+    <div class="chip" onclick="sendChip('Болит зуб')">Болит</div>
+    <div class="chip" onclick="sendChip('Чистка цена?')">Чистка</div>
+    <div class="chip" onclick="sendChip('Где вы?')">Где?</div>
+  </div>
+  <div id="chat" class="chat"></div>
+  <div class="input">
+    <textarea id="inp" rows="1" placeholder="Сообщение" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+    <button id="btn" class="send" onclick="send()">➤</button>
+  </div>
+</div>
+
+<script>
+let messages=[]; const chat=document.getElementById('chat'), inp=document.getElementById('inp'), btn=document.getElementById('btn'), wrap=document.getElementById('chatWrap');
+function toggleChat(){ wrap.classList.toggle('open'); if(wrap.classList.contains('open')) inp.focus(); }
+function add(r,t){ const d=document.createElement('div'); d.className='bubble '+(r==='user'?'user':'bot'); d.textContent=t; const tm=document.createElement('div'); tm.className='time'; tm.textContent=new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})+' '+(r==='user'?'✓✓':''); d.appendChild(tm); chat.appendChild(d); chat.scrollTop=chat.scrollHeight; }
+const API_URLS=['/.netlify/functions/chat','/api/chat'];
+async function fetchChat(p){ for(const u of API_URLS){ try{ const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)}); if(r.status===404) continue; const j=await r.json(); if(j.error) throw new Error(j.error); return j; }catch(e){ continue; } } throw new Error('API недоступен'); }
+async function send(){ const t=inp.value.trim(); if(!t) return; inp.value=''; add('user',t); messages.push({role:'user',content:t}); const typ=document.createElement('div'); typ.textContent='…'; typ.style.cssText='align-self:flex-start;background:#fff;padding:6px 10px;border-radius:7px;font-size:13px;color:#667781'; chat.appendChild(typ); try{ const j=await fetchChat({messages}); typ.remove(); add('bot',j.reply); messages.push({role:'assistant',content:j.reply}); }catch(e){ typ.remove(); add('bot','Ошибка: '+e.message); } }
+function sendChip(t){ inp.value=t; send(); }
+// авто-старт
+(async()=>{ messages.push({role:'user',content:'Привет! Начни как в промпте: ты пишешь первым «Здравствуйте! Dentica. Что вас беспокоит?»'}); try{ const j=await fetchChat({messages}); add('bot',j.reply); messages.push({role:'assistant',content:j.reply}); }catch(e){} messages=messages.filter(m=>!m.content.includes('Начни как')); if(messages[0]?.role==='user') messages.shift(); })();
+</script>
+</body>
+</html>
