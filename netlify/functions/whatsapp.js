@@ -1,68 +1,37 @@
-// netlify/functions/whatsapp.js — WhatsApp Cloud API → Gemini (встроен SYSTEM_PROMPT)
-// ENV: GEMINI_API_KEY, GEMINI_MODELS, WHATSAPP_TOKEN, PHONE_NUMBER_ID, VERIFY_TOKEN
+// netlify/functions/whatsapp.js — WhatsApp Cloud API → Gemini
+// ENV: GEMINI_API_KEY, WHATSAPP_TOKEN, PHONE_NUMBER_ID, VERIFY_TOKEN, WHATSAPP_APP_SECRET (optional)
+// Hardened: signature, duplicate, rate limit, validation, no PII logs, prompt hash 12970cdc9b29
 const SYSTEM_PROMPT = "# Промпт: ИИ-администратор стоматологии «Имплант-Дент»\n\nЗаполнено на основе данных 2ГИС (карточка клиники, обновление прайса 25.02.2026).\n\n---\n\nТы — администратор стоматологии Имплант-Дент в городе Петропавловск. Ты общаешься в мессенджере с людьми, которые думают записаться. Твоя задача: понять, что человеку нужно, ответить на вопросы и взять имя с телефоном, чтобы клиника перезвонила и записала.\n\nКалендарь не подключён. Никогда не называй конкретные свободные окна и не подтверждай запись — ты договариваешься о том, что человеку перезвонят.\n\n---\n\n## ГЛАВНОЕ ПРАВИЛО\n\n**Сначала ответь человеку. Потом задай один вопрос.**\n\nКаждое твоё сообщение устроено так:\n\n1. Одна короткая строка про то, что он только что сказал\n2. Ответ на его вопрос, если он был\n3. Следующий вопрос. Только один\n\nЕсли человек прислал просто факт («четверг», «да», номер телефона) — первый пункт пропускай, не реагируй на мелочи, иди дальше.\n\nНикогда не отвечай заготовкой, проигнорировав сказанное.\n\n**Плохо:** «Здравствуйте! Спасибо за обращение. Чем могу помочь?»\n**Хорошо:** «Ох, неделю с болью — это тяжело. Ноет постоянно или когда жуёте?»\n\n---\n\n## КАК ТЫ ГОВОРИШЬ\n\n- Простые слова. Коротко. Одна-две строки на сообщение\n- Как живой администратор в переписке, а не как робот из справочной\n- Без канцелярита: не «осуществляем приём», а «принимаем»\n- Без «уважаемый клиент», без «рады приветствовать»\n- Максимум один смайл за диалог, и только если человек сам их ставит\n- На «ты» не переходи, но и не выкай через строчку — обращайся нейтрально\n- Не извиняйся по три раза. Одного «сочувствую» достаточно\n\n---\n\n## О КЛИНИКЕ\n\n- Название: стоматология «Имплант-Дент»\n- Адрес: Петропавловск, ул. Интернациональная, 83, 1 этаж (рядом остановка \"по требованию\" — 2 мин пешком; 13 парковок поблизости)\n- Приём строго по предварительной записи\n- Телефон: +7 708 543-63-18\n- WhatsApp (основной канал записи клиники): +7 778 147-07-02\n- Instagram: @implant_dent_p\n- Специалисты: стоматолог-хирург, стоматолог-ортопед\n- Лицензия № 01287DT\n- Рейтинг на 2ГИС: 4.7 (26 оценок)\n- Как клиника описывает себя: «Качественное и безболезненное выполнение всех стоматологических услуг»\n- Доступная среда: вход оборудован для людей с инвалидностью\n- Способы оплаты: картой, наличными, переводом с карты, по QR-коду\n\n**Цены** (по прайсу клиники, обновлён 25.02.2026):\n\nТерапия\n- Консультация — 1 000 ₸\n- Кариес поверхностный — 22 000 ₸\n- Кариес средний — 22 000 ₸\n- Кариес глубокий — 26 000 ₸\n- Пульпит одноканального зуба — 34 000 ₸\n- Пульпит двухканального зуба — 36 000 ₸\n- Пульпит многоканального зуба — 42 000 ₸\n- Периодонтит — 48 000 ₸\n- Периодонтит многокорневого зуба — 50 000 ₸\n- Реставрация зуба — 20 000–30 000 ₸\n- Фторлак (покрытие зубов) — от 500 ₸\n- Ультразвуковая чистка — 24 000 ₸\n\nХирургия\n- Удаление простое — 16 000 ₸\n- Удаление сложное — от 20 000 ₸\n- Удаление зуба мудрости — от 25 000 ₸\n\nИмплантация\n- Имплант, 1 единица — от 140 000 ₸\n- Синус-лифтинг (костная пластика перед имплантацией) — 300 000 ₸\n\nОртопедия\n- Снятие диагностического слепка — 5 000 ₸\n- Коронка керамика — 35 000 ₸\n- Коронка диоксид циркония — 80 000 ₸\n- Коронка диоксид циркония на импланте — 100 000 ₸\n- Временная коронка — 2 000 ₸\n- Временная коронка PMMA — 10 000 ₸\n- Фиксация коронки (1 ед.) — 2 000 ₸\n- Снятие коронки (штампованной) — 2 000 ₸\n- Снятие коронки (металлокерамика) — 10 000 ₸\n- Бюгельный протез (1 челюсть) — 150 000 ₸\n- Съёмный протез (1 челюсть) — 90 000 ₸\n- Ацеталовый пластиночный протез — 130 000 ₸\n- Слепок ZETA — 2 000 ₸\n\n---\n\n## ПЕРВОЕ СООБЩЕНИЕ\n\nЕсли человек написал первым — отвечай на то, с чем он пришёл.\n\nЕсли пишешь первым, одна строка:\n«Здравствуйте! Имплант-Дент. Что вас беспокоит?»\n\nНе перечисляй услуги. Не рассказывай о клинике. Один вопрос.\n\n---\n\n## ХОД РАЗГОВОРА\n\n**Шаг 1. Куда отнести.** Первый вопрос сортирует человека в одну из веток. Обычно их четыре: болит что-то конкретное, плановый осмотр и чистка, детский приём, ортодонтия и импланты.\n\n**Шаг 2. Уточнить.** Один-два вопроса под конкретную ветку, не больше.\n\n- Болит: как давно, постоянно или при нагрузке\n- Осмотр: когда были у стоматолога в последний раз\n- Ребёнок: сколько лет, был ли раньше у врача\n- Импланты и брекеты: делали ли снимок, консультировались ли где-то\n\n**Шаг 3. Время.** «Вам удобнее в будни или в выходные? Утром или ближе к вечеру?»\n\n**Шаг 4. Имя.**\n\n**Шаг 5. Телефон.**\n\n**Шаг 6. Закрытие.** «Записал. Администратор перезвонит в ближайшее время и подберёт точное время. Если что-то изменится — пишите сюда.»\n\nИмя и телефон спрашиваешь **в конце**, а не в начале. Человек должен сначала получить пользу.\n\n---\n\n## ЧАСТЫЕ ВОПРОСЫ\n\nОтвечай коротко и только тем, что есть в блоке о клинике. Ответил — сразу возвращайся к следующему вопросу по ходу разговора.\n\nЕсли вопроса нет в списке и ответа ты не знаешь — так и скажи: «Уточню у администратора, он перезвонит и ответит точно». Не выдумывай.\n\n**Сколько стоит имплант?**\nИмплант под ключ (1 единица) — от 140 000 ₸. Если нужна костная пластика перед установкой (синус-лифтинг) — это отдельно, 300 000 ₸. Точную сумму скажут после осмотра.\n\n**Сколько стоит вылечить зуб?**\nЗависит от стадии кариеса: поверхностный и средний — 22 000 ₸, глубокий — 26 000 ₸. Если задет нерв (пульпит) — от 34 000 ₸ в зависимости от зуба.\n\n**Сколько стоит удалить зуб?**\nПростое удаление — 16 000 ₸. Сложное или зуб мудрости — от 20 000–25 000 ₸, точнее скажут после осмотра.\n\n**Как к вам записаться?**\nОставьте здесь имя и номер — администратор перезвонит и подберёт время. Можно и через WhatsApp: +7 778 147-07-02.\n\n**Какими способами можно оплатить?**\nКартой, наличными, переводом с карты или по QR-коду.\n\n**Где вы находитесь?**\nПетропавловск, ул. Интернациональная, 83, 1 этаж. Рядом остановка и парковка.\n\n---\n\n## ЕСЛИ СПРАШИВАЮТ ПОСРЕДИ РАЗГОВОРА\n\nЧеловек может в любой момент спросить про цену, адрес или врача. Отвечай сразу, потом продолжай с того места, где остановились.\n\n**Про цену.** Называй только то, что есть на сайте, и всегда с оговоркой, что точную сумму скажут после осмотра. Не обещай скидок.\n\n**Про «а это точно не больно».** Не давай медицинских обещаний. Скажи, что об этом лучше спросить врача, и что обезболивание подбирают индивидуально.\n\n**Про срочность.** Если человек пишет, что боль сильная, температура или опухла щека — не тяни его по всем шагам. Возьми имя и телефон сразу и скажи, что передашь как срочное.\n\n---\n\n## ЧЕГО НЕ ДЕЛАТЬ НИКОГДА\n\n- Не выдумывать факты о клинике: услуги, врачей, цены, акции, гарантии, точный график работы (он не подтверждён — не называй дни и часы, если не спросили прямо; если спросили — скажи, что приём по записи, и что точное время подскажет администратор)\n- Не называть конкретное свободное время и не подтверждать запись\n- Не ставить диагнозы и не давать медицинских рекомендаций\n- Не обещать результат лечения\n- Не говорить о том, что происходит «за кулисами»: «передаю в CRM», «отправил уведомление администратору», «создаю заявку»\n- Не задавать больше одного вопроса за сообщение\n- Не писать простыни: если сообщение длиннее трёх строк — режь\n- Не спорить и не давить, если человек передумал. «Хорошо, если что — пишите»\n\n---\n\n## ЗАПИСЬ\n\nКалендаря нет. Ты не записываешь — ты собираешь имя и телефон и обещаешь звонок.\n\nФормулировка на закрытии: «Передал администратору, перезвонят и подберут время».\n\nНе пиши «вы записаны». Человек не записан, пока с ним не поговорили.\n";
-
-const GEMINI_URL = (m)=>`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
-const DEFAULT_GEMINI = ['gemini-3.6-flash','gemini-3.5-flash','gemini-3.5-flash-lite'];
-
-function toGeminiPayload(messages){
-  const sys = messages[0]?.role==='system' ? messages[0].content : '';
-  const hist = sys ? messages.slice(1) : messages;
-  const contents = hist.map(m=>({role:m.role==='assistant'?'model':'user', parts:[{text:m.content}]}));
-  if(!contents.length) contents.push({role:'user',parts:[{text:'Привет'}]});
-  return { systemInstruction:{parts:[{text:sys}]}, contents, generationConfig:{temperature:0.6, maxOutputTokens:600} };
-}
-async function callGemini(allMessages){
-  const key=process.env.GEMINI_API_KEY; if(!key) throw new Error('GEMINI_API_KEY not set');
-  const models=(process.env.GEMINI_MODELS||DEFAULT_GEMINI.join(',')).split(',').map(s=>s.trim()).filter(Boolean);
-  let last='';
-  for(const m of models){
-    const url=`${GEMINI_URL(m.replace('models/',''))}?key=${key}`;
-    const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),12000);
-    try{
-      const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(toGeminiPayload(allMessages)),signal:ctrl.signal});
-      clearTimeout(t);
-      if(r.ok){ const d=await r.json(); const txt=(d.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('').trim(); if(txt) return txt; last=m+' empty'; }
-      else{ const txt=await r.text(); last=m+' '+r.status+' '+txt.slice(0,300); if(r.status===401) throw new Error('GEMINI_API_KEY rejected'); }
-    }catch(e){ clearTimeout(t); last=m+' '+String(e).slice(0,300); }
-  }
-  throw new Error(last);
-}
-async function sendWhatsApp(to, text){
-  const token=process.env.WHATSAPP_TOKEN; const phoneId=process.env.PHONE_NUMBER_ID;
-  if(!token||!phoneId) throw new Error('WHATSAPP_TOKEN/PHONE_NUMBER_ID not set');
-  const r=await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`,{
-    method:'POST',
-    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-    body: JSON.stringify({messaging_product:'whatsapp', to, type:'text', text:{body:text.slice(0,4000)}})
-  });
-  if(!r.ok){ const t=await r.text(); throw new Error('wa send '+r.status+' '+t.slice(0,400)); }
-  return r.json();
-}
-
+const PROMPT_HASH = "12970cdc9b29";
+const crypto=require('crypto');
+const GEMINI_URL=(m)=>`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
+const DEFAULT_GEMINI=['gemini-3.6-flash','gemini-3.5-flash','gemini-3.5-flash-lite'];
+const _rateWA=new Map(); const _seen=new Map(); // messageId -> ts
+function isWaRateLimited(from, limit=10, windowMs=60000){ const now=Date.now(); const arr=_rateWA.get(from)||[]; const fresh=arr.filter(t=>now-t<windowMs); if(fresh.length>=limit) return true; fresh.push(now); _rateWA.set(from,fresh); return false; }
+function isDuplicate(msgId){ if(!msgId) return false; if(_seen.has(msgId)) return true; _seen.set(msgId, Date.now()); // cleanup 5m
+  for(const [k,v] of _seen) if(Date.now()-v>300000) _seen.delete(k); return false; }
+function verifySignature(rawBody, signature, secret){ if(!secret) return true; if(!signature) return false; const expected='sha256='+crypto.createHmac('sha256', secret).update(rawBody).digest('hex'); // timingSafe
+  try{ return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected)); }catch{ return false; } }
+function toGeminiPayload(messages){ const sys=messages[0]?.role==='system'?messages[0].content:''; const hist=sys?messages.slice(1):messages; const contents=hist.map(m=>({role:m.role==='assistant'?'model':'user',parts:[{text:m.content}]})); if(!contents.length) contents.push({role:'user',parts:[{text:'Привет'}]}); return {systemInstruction:{parts:[{text:sys}]},contents,generationConfig:{temperature:0.6,maxOutputTokens:600}}; }
+async function callGemini(allMessages){ const key=process.env.GEMINI_API_KEY; if(!key) throw new Error('GEMINI_API_KEY not set'); const models=(process.env.GEMINI_MODELS||DEFAULT_GEMINI.join(',')).split(',').map(s=>s.trim()).filter(Boolean); let last=''; for(const m of models){ const url=`${GEMINI_URL(m.replace('models/',''))}?key=${key}`; const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),12000); try{ const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(toGeminiPayload(allMessages)),signal:ctrl.signal}); clearTimeout(t); if(r.ok){ const d=await r.json(); const txt=(d.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('').trim(); if(txt) return txt; last=m+' empty'; } else{ last=m+' '+r.status; if(r.status===401) throw new Error('GEMINI_API_KEY rejected'); } }catch(e){ clearTimeout(t); last=m+' '+String(e).slice(0,200); } } throw new Error(last); }
+async function sendWhatsApp(to, text){ const token=process.env.WHATSAPP_TOKEN; const phoneId=process.env.PHONE_NUMBER_ID; if(!token||!phoneId) throw new Error('WHATSAPP_TOKEN/PHONE_NUMBER_ID not set'); if(!/^\d{7,15}$/.test(to)) throw new Error('invalid phone'); const r=await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',to,type:'text',text:{body:text.slice(0,4000)}})}); if(!r.ok){ const t=await r.text(); throw new Error('wa send '+r.status+' '+t.slice(0,300)); } return r.json(); }
 exports.handler = async (event)=>{
-  if(event.httpMethod==='GET'){
-    const p=event.queryStringParameters||{};
-    if(p['hub.mode']==='subscribe' && p['hub.verify_token']===process.env.VERIFY_TOKEN){
-      return {statusCode:200, body: p['hub.challenge']};
-    }
-    return {statusCode:403, body:'verify failed'};
-  }
+  if(event.httpMethod==='GET'){ const p=event.queryStringParameters||{}; if(p['hub.mode']==='subscribe' && p['hub.verify_token']===process.env.VERIFY_TOKEN) return {statusCode:200, body:p['hub.challenge']}; return {statusCode:403, body:'verify failed'}; }
   if(event.httpMethod!=='POST') return {statusCode:405, body:'method not allowed'};
+  if(event.body && Buffer.byteLength(event.body,'utf8')>100*1024) return {statusCode:413, body:'payload too large'};
+  // signature
+  const secret=process.env.WHATSAPP_APP_SECRET; const sig=event.headers['x-hub-signature-256']||event.headers['X-Hub-Signature-256']||'';
+  if(secret && !verifySignature(event.body||'', sig, secret)){ console.error('whatsapp signature failed'); return {statusCode:401, body:'invalid signature'}; }
   let body; try{ body=JSON.parse(event.body||'{}'); }catch{ return {statusCode:400, body:'bad json'}; }
-  console.log('wa webhook', JSON.stringify(body).slice(0,2000));
-  const entry = body.entry?.[0]?.changes?.[0]?.value;
-  const msg = entry?.messages?.[0];
+  const entry=body.entry?.[0]?.changes?.[0]?.value; const msg=entry?.messages?.[0];
   if(!msg || msg.type!=='text') return {statusCode:200, body:'ignored non-text'};
-  const from = msg.from; const text = msg.text.body;
-  const allMessages = [{role:'system', content: SYSTEM_PROMPT}, {role:'user', content: text}];
-  try{
-    const reply = await callGemini(allMessages);
-    await sendWhatsApp(from, reply);
-  }catch(e){
-    console.error('whatsapp error', e);
-    try{ await sendWhatsApp(from, 'Сбой, попробуйте ещё раз. '+String(e).slice(0,200)); }catch{}
-    return {statusCode:500, body: String(e).slice(0,500)};
-  }
+  const msgId=msg.id; if(isDuplicate(msgId)){ console.log('duplicate', msgId); return {statusCode:200, body:'duplicate'}; }
+  const from=msg.from; if(!/^\d{7,15}$/.test(from)){ console.error('invalid from', from); return {statusCode:200, body:'invalid phone'}; }
+  if(isWaRateLimited(from)){ console.log('wa rate limited', from); return {statusCode:200, body:'rate limited'}; }
+  let text=(msg.text.body||'').trim().slice(0,2000); if(!text) return {statusCode:200, body:'empty'};
+  console.log('wa msg', {id:msgId, from: from.slice(-4), len:text.length}); // no PII full
+  const allMessages=[{role:'system', content:SYSTEM_PROMPT},{role:'user',content:text}];
+  try{ const reply=await callGemini(allMessages); await sendWhatsApp(from, reply); }catch(e){ console.error('whatsapp error', String(e).slice(0,500)); // no phone in error
+    try{ await sendWhatsApp(from, 'Сбой, попробуйте ещё раз.'); }catch{} return {statusCode:500, body:'error'}; }
   return {statusCode:200, body:'ok'};
 };

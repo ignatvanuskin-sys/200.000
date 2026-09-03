@@ -1,0 +1,32 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install -r demo/requirements.txt
+      - run: python -m py_compile demo/app.py demo/bot.py demo/config.py
+      - run: pip install pip-audit
+      - run: pip-audit --desc --requirement demo/requirements.txt || true
+      - run: python demo/test_all.py
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: node --check netlify/functions/chat.js
+      - run: node --check netlify/functions/whatsapp.js
+      - run: npm audit || true
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          echo "secret scan (no real keys in repo)"
+          ! grep -R "sk-or-v1-" --include="*.md" --include="*.js" --include="*.py" . | grep -v "sk-or-v1-xxxxxxxx" | grep -v ".env"
+          ! grep -R "AQ\.Ab8" --include="*.md" --include="*.js" --include="*.py" . | grep -v ".env"
+          echo "no leaked secrets"

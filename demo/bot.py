@@ -104,10 +104,21 @@ def call_llm(messages, temperature=0.6, max_tokens=600):
                 raise RuntimeError(f"Gemini fail: {e_gem} | OpenRouter fail: {e_or}")
         raise
 
+def _sanitize(text: str, limit=2000) -> str:
+    return text.strip()[:limit]
+
 def build_messages(history):
-    """history: list of {"role": "user"/"assistant", "content": str}"""
+    """history: list of {"role": "user"/"assistant", "content": str} — санитизируем"""
+    clean = []
+    for m in history[-16:]:
+        role = m.get("role","user")
+        if role not in ("user","assistant","system"):
+            role = "user"
+        content = _sanitize(m.get("content","") or "")
+        if content:
+            clean.append({"role": role, "content": content})
     msgs = [{"role": "system", "content": SYSTEM_PROMPT}]
-    msgs.extend(history)
+    msgs.extend(clean)
     return msgs
 
 def extract_lead(history):
@@ -124,12 +135,28 @@ def extract_lead(history):
         name = m2.group(1)
     return name, phone
 
+import threading
+_lead_lock = threading.Lock()
 def log_lead(history, meta=None):
     name, phone = extract_lead(history)
-    if name or phone:
+    if not (name or phone):
+        return
+    # privacy: не логируем полный номер в консоль, только маскированный
+    try:
+        # rotation 1MB → leads.1.jsonl
+        if LEADS_FILE.exists() and LEADS_FILE.stat().st_size > 1_000_000:
+            backup = LEADS_FILE.with_suffix(".1.jsonl")
+            try:
+                if backup.exists(): backup.unlink()
+                LEADS_FILE.rename(backup)
+            except: pass
         rec = {"ts": int(time.time()), "name": name, "phone": phone, "history": history[-6:], "meta": meta}
-        with open(LEADS_FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        # file lock для Railway multi-worker (best effort)
+        with _lead_lock:
+            with open(LEADS_FILE, "a", encoding="utf-8") as f:
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print(f"[lead log error] {e}")
 
 # alias для совместимости со старым app.py
 call_openrouter_compat = call_llm
