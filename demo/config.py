@@ -15,6 +15,22 @@ OPENROUTER_MODELS = [m.strip() for m in os.getenv("OPENROUTER_MODELS", "minimax/
 OPENROUTER_REFERER = os.getenv("OPENROUTER_REFERER", "http://localhost:8000")
 OPENROUTER_TITLE = os.getenv("OPENROUTER_TITLE", "Implant-Dent Demo")
 
+# --- WhatsApp Cloud API (Meta) ---
+WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN", "")
+WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
+WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "")
+WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "")  # для проверки подписи X-Hub-Signature-256
+
+# --- Telegram (уведомления админу о лидах) ---
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+
+# --- Dentica (демо-клиника, отдельный промпт) ---
+DENTICA_PROMPT = os.getenv("DENTICA_PROMPT", """# Промпт: ИИ-администратор Dentica (Алматы)
+
+Ты — администратор стоматологии Dentica в городе Алматы. Адрес: пр. Абая, 115, 2 этаж. Телефон +7 701 123 45 67, WhatsApp +7 701 123 45 67. Приём по записи. Цены: имплант от 140 000 ₸, чистка УЗ 15 000 ₸, кариес 12 000–26 000 ₸. Календарь не подключён — не называй окна, договаривайся о звонке. Отвечай коротко, 1-2 строки, сначала ответь, потом один вопрос. Не выдумывай врачей/акций.
+""")
+
 # Загружаем системный промпт — ищем в demo/ и в корне (для Railway Root=demo)
 for _cand in [
     Path(__file__).parent.parent / "PROMPT_Имплант-Дент.md",

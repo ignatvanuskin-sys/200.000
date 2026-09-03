@@ -133,7 +133,7 @@ function showTyping(){
 }
 function autoGrow(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,80)+'px'; }
 
-const API_URLS = ['/.netlify/functions/chat', '/api/chat'];
+const API_URLS = ['https://200000-production-67af.up.railway.app/api/chat'];
 async function fetchChat(payload){
   let lastErr=null;
   for(const url of API_URLS){
@@ -146,7 +146,7 @@ async function fetchChat(payload){
       if(j.error){
         const msg=j.error+' '+(j.detail||'');
         if(msg.includes('GEMINI_API_KEY') || msg.includes('OPENROUTER_API_KEY') || msg.includes('not set')){
-          throw new Error('Бот не настроен — администратору нужно добавить GEMINI_API_KEY в Netlify → Site settings → Environment variables');
+          throw new Error('Бот не настроен — администратору нужно добавить GEMINI_API_KEY в переменные окружения Railway');
         }
         throw new Error(j.error + (j.detail? ' '+j.detail:''));
       }

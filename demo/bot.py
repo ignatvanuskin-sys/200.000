@@ -4,10 +4,15 @@ bot.py — ядро демо-бота Имплант-Дент (Gemini primary, O
 - ходит в Gemini (gemini-3.6-flash, free 1500/d) с fallback по моделям + OpenRouter
 - ведёт историю диалога, логирует лиды
 """
-import json, time, re, sys
+import json, time, re, sys, hashlib, hmac
 from pathlib import Path
 import requests
-from config import GEMINI_API_KEY, GEMINI_MODELS, OPENROUTER_API_KEY, OPENROUTER_MODELS, OPENROUTER_REFERER, OPENROUTER_TITLE, SYSTEM_PROMPT, LEADS_FILE
+from config import (
+    GEMINI_API_KEY, GEMINI_MODELS, OPENROUTER_API_KEY, OPENROUTER_MODELS,
+    OPENROUTER_REFERER, OPENROUTER_TITLE, SYSTEM_PROMPT, LEADS_FILE,
+    WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_VERIFY_TOKEN,
+    WHATSAPP_APP_SECRET, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, DENTICA_PROMPT,
+)
 
 # Windows cp1251 fix
 try:
@@ -160,6 +165,167 @@ def log_lead(history, meta=None):
 
 # alias для совместимости со старым app.py
 call_openrouter_compat = call_llm
+
+# ===================== WhatsApp Cloud API =====================
+
+# In-memory хранилища (для прод нужен Redis/KV)
+_wa_rate = {}       # phone -> [timestamps]
+_wa_seen = {}       # msg_id -> timestamp (дедупликация)
+_wa_history = {}   # phone -> [{role, content, ts}]
+
+def _is_wa_rate_limited(from_id: str, limit=10, window_s=60) -> bool:
+    now = time.time()
+    arr = _wa_rate.get(from_id, [])
+    fresh = [t for t in arr if now - t < window_s]
+    if len(fresh) >= limit:
+        return True
+    fresh.append(now)
+    _wa_rate[from_id] = fresh
+    return False
+
+def _is_wa_duplicate(msg_id: str) -> bool:
+    if not msg_id:
+        return False
+    if msg_id in _wa_seen:
+        return True
+    _wa_seen[msg_id] = time.time()
+    # cleanup старше 5 минут
+    now = time.time()
+    for k in list(_wa_seen.keys()):
+        if now - _wa_seen[k] > 300:
+            del _wa_seen[k]
+    return False
+
+def _get_wa_history(from_id: str):
+    h = _wa_history.get(from_id, [])
+    now = time.time()
+    fresh = [m for m in h if now - m.get("ts", 0) < 24 * 3600]
+    if len(fresh) != len(h):
+        _wa_history[from_id] = fresh
+    return [{"role": m["role"], "content": m["content"]} for m in fresh]
+
+def _push_wa_history(from_id: str, role: str, content: str):
+    arr = _wa_history.get(from_id, [])
+    arr.append({"role": role, "content": content, "ts": time.time()})
+    if len(arr) > 10:
+        arr.pop(0)
+    _wa_history[from_id] = arr
+
+def _verify_wa_signature(raw_body: bytes, signature: str, secret: str) -> bool:
+    """Проверка X-Hub-Signature-256 от Meta."""
+    if not secret:
+        return True  # если секрет не задан — пропускаем
+    if not signature:
+        return False
+    expected = "sha256=" + hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(signature, expected)
+
+def _notify_admin_telegram(text: str, from_id: str):
+    """Уведомление админа в Telegram о новом лиде."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        print(f"[notify skip] no telegram config, from=...{from_id[-4:]}")
+        return
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+            json={"chat_id": TELEGRAM_CHAT_ID, "text": f"📥 Заявка ...{from_id[-4:]}: {text[:500]}"},
+            timeout=10,
+        )
+    except Exception as e:
+        print(f"[notify fail] {str(e)[:200]}")
+
+def send_whatsapp(to: str, text: str):
+    """Отправка текстового сообщения в WhatsApp Cloud API."""
+    if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
+        raise RuntimeError("WHATSAPP_TOKEN/WHATSAPP_PHONE_NUMBER_ID not set")
+    if not re.match(r"^\d{7,15}$", to):
+        raise ValueError(f"invalid phone: {to}")
+    r = requests.post(
+        f"https://graph.facebook.com/v20.0/{WHATSAPP_PHONE_NUMBER_ID}/messages",
+        headers={
+            "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "messaging_product": "whatsapp",
+            "to": to,
+            "type": "text",
+            "text": {"body": text[:4000]},
+        },
+        timeout=30,
+    )
+    if not r.ok:
+        raise RuntimeError(f"wa send {r.status_code} {r.text[:300]}")
+    return r.json()
+
+def process_whatsapp_message(body: dict, raw_body: bytes, signature: str):
+    """
+    Обработка входящего webhook от WhatsApp Cloud API.
+    Возвращает (status_code, response_dict).
+    """
+    # Проверка подписи
+    if WHATSAPP_APP_SECRET and not _verify_wa_signature(raw_body, signature, WHATSAPP_APP_SECRET):
+        print("[wa] signature verification failed")
+        return 401, {"error": "invalid signature"}
+
+    entry = (body.get("entry") or [{}])[0]
+    changes = (entry.get("changes") or [{}])[0]
+    value = changes.get("value", {})
+    msg = (value.get("messages") or [None])[0]
+
+    if not msg:
+        # status update или другой нерелевантный payload
+        return 200, {"status": "ignored non-message"}
+
+    if msg.get("type") != "text":
+        return 200, {"status": "ignored non-text"}
+
+    msg_id = msg.get("id", "")
+    if _is_wa_duplicate(msg_id):
+        print(f"[wa] duplicate {msg_id}")
+        return 200, {"status": "duplicate"}
+
+    from_id = msg.get("from", "")
+    if not re.match(r"^\d{7,15}$", from_id):
+        print(f"[wa] invalid from {from_id}")
+        return 200, {"status": "invalid phone"}
+
+    if _is_wa_rate_limited(from_id):
+        print(f"[wa] rate limited {from_id[-4:]}")
+        return 200, {"status": "rate limited"}
+
+    text = (msg.get("text", {}).get("body", "") or "").strip()[:2000]
+    if not text:
+        return 200, {"status": "empty"}
+
+    print(f"[wa] msg id={msg_id} from=...{from_id[-4:]} len={len(text)}")
+
+    # История диалога (in-memory, 10 сообщений, 24ч)
+    _push_wa_history(from_id, "user", text)
+    hist = _get_wa_history(from_id)
+    all_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + hist
+
+    try:
+        reply, _model = call_llm(all_messages)
+        _push_wa_history(from_id, "assistant", reply)
+        send_whatsapp(from_id, reply)
+
+        # Уведомление админу если нашли телефон/имя или бот сказал "Передал"
+        has_phone = bool(re.search(r"\+7|8\s*\(?\d{3}", text) or re.search(r"\+7|8\s*\(?\d{3}", reply))
+        if has_phone or "Передал администратору" in reply:
+            snippet = " | ".join(m["content"] for m in hist[-3:])[:400]
+            _notify_admin_telegram(snippet, from_id)
+
+    except Exception as e:
+        print(f"[wa error] {str(e)[:500]}")
+        try:
+            send_whatsapp(from_id, "Сбой, попробуйте ещё раз. Оператор свяжется.")
+        except:
+            pass
+        return 500, {"error": "processing error"}
+
+    return 200, {"status": "ok"}
+
 
 if __name__ == "__main__":
     print("Имплант-Дент DEMO — Gemini. Пиши 'выход' для завершения.\n")

@@ -10,9 +10,7 @@ __pycache__/
 *.py[cod]
 # node
 node_modules/
-# netlify local
-.netlify/
-# zips (не пушим бинарники в гит, для Netlify деплоя используй drag&drop или CI)
+# zips
 *.zip
 # os
 .DS_Store
