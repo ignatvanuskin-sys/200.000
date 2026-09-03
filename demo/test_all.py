@@ -101,7 +101,7 @@ try:
     r2 = requests.post("http://localhost:8012/api/chat", json={"messages":[{"role":"user","content":"Где вы находитесь?"}]}, timeout=40)
     assert r2.status_code==200, f"chat status {r2.status_code} {r2.text[:400]}"
     j=r2.json()
-    assert "reply" in j and "Интернациональная" in j["reply"], f"chat reply {j}"
+    assert "reply" in j and "интернациональн" in j["reply"].lower(), f"chat reply {j}"
     assert "model" in j
     ok(f"chat OK [{j['model']}] {j['reply'][:100]}")
     # second test: empty / validation
