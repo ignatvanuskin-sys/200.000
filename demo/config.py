@@ -15,10 +15,16 @@ OPENROUTER_MODELS = [m.strip() for m in os.getenv("OPENROUTER_MODELS", "minimax/
 OPENROUTER_REFERER = os.getenv("OPENROUTER_REFERER", "http://localhost:8000")
 OPENROUTER_TITLE = os.getenv("OPENROUTER_TITLE", "Implant-Dent Demo")
 
-# Загружаем системный промпт из файла выше
-PROMPT_PATH = Path(__file__).parent.parent / "PROMPT_Имплант-Дент.md"
-if PROMPT_PATH.exists():
-    SYSTEM_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
+# Загружаем системный промпт — ищем в demo/ и в корне (для Railway Root=demo)
+for _cand in [
+    Path(__file__).parent.parent / "PROMPT_Имплант-Дент.md",
+    Path(__file__).parent / "PROMPT_Имплант-Дент.md",
+    Path.cwd() / "PROMPT_Имплант-Дент.md",
+    Path.cwd() / "demo" / "PROMPT_Имплант-Дент.md",
+]:
+    if _cand.exists():
+        SYSTEM_PROMPT = _cand.read_text(encoding="utf-8")
+        break
 else:
     SYSTEM_PROMPT = "Ты — администратор стоматологии Имплант-Дент."
 
