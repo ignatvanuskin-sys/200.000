@@ -8,7 +8,10 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.11' }
       - run: pip install -r demo/requirements.txt
-      - run: python -m py_compile demo/app.py demo/bot.py demo/config.py
+      - run: python -m py_compile demo/app.py demo/bot.py demo/config.py demo/store.py
+      - run: pip install pytest httpx
+      - run: python demo/test_prod_fix.py
+      - run: python demo/test_hardening.py
       - run: pip install pip-audit
       - run: pip-audit --desc --requirement demo/requirements.txt || true
       - run: python demo/test_all.py
