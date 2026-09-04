@@ -138,21 +138,25 @@ async function fetchChat(payload){
   let lastErr=null;
   for(const url of API_URLS){
     try{
-      const ctrl=new AbortController(); const tm=setTimeout(()=>ctrl.abort(),14000);
+      const ctrl=new AbortController(); const tm=setTimeout(()=>ctrl.abort(),75000);
       const r=await fetch(url,{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload), signal:ctrl.signal});
       clearTimeout(tm);
       if(r.status===404){ lastErr='404 '+url; continue; }
+      if(r.status===429){ throw new Error('Много запросов — подождите минуту и попробуйте снова'); }
       const j=await r.json();
       if(j.error){
         const msg=j.error+' '+(j.detail||'');
         if(msg.includes('GEMINI_API_KEY') || msg.includes('OPENROUTER_API_KEY') || msg.includes('not set')){
           throw new Error('Бот не настроен — администратору нужно добавить GEMINI_API_KEY в переменные окружения Railway');
         }
+        if(j.error.includes('rate_limited')) throw new Error('Много запросов — подождите минуту и попробуйте снова');
+        if(j.error.includes('temporarily')) throw new Error('Бот перегружен — подождите немного и попробуйте снова (повторно отправлять не нужно)');
         throw new Error(j.error + (j.detail? ' '+j.detail:''));
       }
       return j;
-    }catch(e){ 
-      if(String(e.message).includes('не настроен')) throw e;
+    }catch(e){
+      if(e.name==='AbortError'){ lastErr=new Error('Ответ занимает дольше обычного — подождите и попробуйте позже, повторно отправлять не нужно'); continue; }
+      if(String(e.message).includes('не настроен')||String(e.message).includes('Подождите')||String(e.message).includes('перегружен')||String(e.message).includes('минуту')||String(e.message).includes('дольше')) throw e;
       lastErr=e; continue; 
     }
   }
